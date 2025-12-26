@@ -92,17 +92,32 @@ jobs:
           name: windows-builds
           path: artifacts/windows
 
+      - name: List artifacts
+        run: |
+          echo "=== All artifacts ==="
+          find artifacts -type f -ls
+
       - name: Generate manifest.json
         run: |
           VERSION=$(node -e "console.log(require('./package.json').version)")
           
-          WIN_FILE=$(find artifacts/windows -name "*.exe" | head -n1)
-          DEB_FILE=$(find artifacts/linux -name "*.deb" | head -n1)
-          RPM_FILE=$(find artifacts/linux -name "*.rpm" | head -n1)
+          WIN_FILE=$(find artifacts/windows -name "*.exe" -type f | head -n1)
+          DEB_FILE=$(find artifacts/linux -name "*.deb" -type f | head -n1)
+          RPM_FILE=$(find artifacts/linux -name "*.rpm" -type f | head -n1)
+          
+          echo "Files found:"
+          echo "  WIN: $WIN_FILE"
+          echo "  DEB: $DEB_FILE"
+          echo "  RPM: $RPM_FILE"
           
           WIN_SHA=$(sha256sum "$WIN_FILE" | awk '{print $1}')
           DEB_SHA=$(sha256sum "$DEB_FILE" | awk '{print $1}')
           RPM_SHA=$(sha256sum "$RPM_FILE" | awk '{print $1}')
+          
+          echo "SHA256 hashes:"
+          echo "  WIN: $WIN_SHA"
+          echo "  DEB: $DEB_SHA"
+          echo "  RPM: $RPM_SHA"
           
           WIN_NAME=$(basename "$WIN_FILE")
           DEB_NAME=$(basename "$DEB_FILE")
@@ -110,27 +125,27 @@ jobs:
           
           BASE_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}"
           
-          cat > manifest.json << EOF
-          {
-            "version": "${VERSION}",
-            "notes": "Release ${VERSION}",
-            "assets": {
-              "windows": {
-                "url": "${BASE_URL}/${WIN_NAME}",
-                "sha256": "${WIN_SHA}"
-              },
-              "deb": {
-                "url": "${BASE_URL}/${DEB_NAME}",
-                "sha256": "${DEB_SHA}"
-              },
-              "rpm": {
-                "url": "${BASE_URL}/${RPM_NAME}",
-                "sha256": "${RPM_SHA}"
+          # Use jq to generate proper JSON
+          jq -n \
+            --arg version "$VERSION" \
+            --arg notes "Release $VERSION" \
+            --arg win_url "$BASE_URL/$WIN_NAME" \
+            --arg win_sha "$WIN_SHA" \
+            --arg deb_url "$BASE_URL/$DEB_NAME" \
+            --arg deb_sha "$DEB_SHA" \
+            --arg rpm_url "$BASE_URL/$RPM_NAME" \
+            --arg rpm_sha "$RPM_SHA" \
+            '{
+              version: $version,
+              notes: $notes,
+              assets: {
+                windows: { url: $win_url, sha256: $win_sha },
+                deb: { url: $deb_url, sha256: $deb_sha },
+                rpm: { url: $rpm_url, sha256: $rpm_sha }
               }
-            }
-          }
-          EOF
+            }' > manifest.json
           
+          echo "=== Generated manifest.json ==="
           cat manifest.json
 
       - name: Create Release

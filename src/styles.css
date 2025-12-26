@@ -951,6 +951,41 @@ body {
 }
 
 /* Toast styles */
-.sonner-toast {
+[data-sonner-toaster] {
+  --normal-bg: #1a1a1a !important;
+  --normal-border: rgba(255,255,255,0.15) !important;
+  --normal-text: #f5f5dc !important;
+}
+
+[data-sonner-toast] {
+  background: #1a1a1a !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: 8px !important;
+  color: #f5f5dc !important;
   font-family: 'Special Elite', monospace !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+
+[data-sonner-toast][data-type="success"] {
+  background: #1a2e1a !important;
+  border-color: #4a9f7e !important;
+}
+
+[data-sonner-toast][data-type="error"] {
+  background: #2e1a1a !important;
+  border-color: #c41e3a !important;
+}
+
+[data-sonner-toast][data-type="info"] {
+  background: #1a1a2e !important;
+  border-color: #3b82f6 !important;
+}
+
+[data-sonner-toast] [data-title] {
+  font-weight: 600 !important;
+}
+
+[data-sonner-toast] [data-description] {
+  opacity: 0.8 !important;
+  font-size: 0.85rem !important;
 }
