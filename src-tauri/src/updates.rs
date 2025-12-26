@@ -3,6 +3,7 @@ use semver::Version;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
+use std::{env, fs};
 use tauri::AppHandle;
 
 const MANIFEST_URL: &str =
@@ -77,7 +78,7 @@ pub async fn check_for_update() -> Result<UpdateInfo, String> {
         .send()
         .await
         .map_err(|e| format!("Failed to fetch manifest: {}", e))?
-        .json()
+        .json::<Manifest>()
         .await
         .map_err(|e| format!("Failed to parse manifest: {}", e))?;
 
@@ -116,11 +117,8 @@ pub async fn install_update(app: AppHandle) -> Result<UpdateInfo, String> {
         .ok_or_else(|| "No asset for this platform".to_string())?;
 
     // Download to app cache dir
-    let cache_dir = app
-        .path_resolver()
-        .app_cache_dir()
-        .ok_or_else(|| "Cannot resolve cache dir".to_string())?;
-    std::fs::create_dir_all(&cache_dir).map_err(|e| e.to_string())?;
+    let cache_dir = env::temp_dir().join("zen-vpn-cache");
+    fs::create_dir_all(&cache_dir).map_err(|e| e.to_string())?;
 
     let filename = asset_url
         .split('/')
