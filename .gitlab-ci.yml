@@ -52,10 +52,10 @@ build-windows:
   script:
     - git config --global --add safe.directory "$Env:CI_PROJECT_DIR"
     - choco install -y nodejs-lts rust
-    - $env:PATH = "C:\Program Files\nodejs;$env:USERPROFILE\.cargo\bin;$env:PATH"
+    - $env:PATH = "C:\Program Files\nodejs;C:\ProgramData\chocolatey\lib\rust\tools\bin;$env:PATH"
     - node --version
-    - rustup --version
-    - rustup default stable
+    - rustc --version
+    - cargo --version
     - if (Test-Path node_modules) { Remove-Item -Recurse -Force node_modules }
     - npm ci --prefer-offline
     - npm install -g @tauri-apps/cli
