@@ -51,15 +51,14 @@ build-windows:
   tags: ["windows"]
   script:
     - git config --global --add safe.directory "$Env:CI_PROJECT_DIR"
-    - choco install -y nodejs-lts
-    - $env:PATH = "C:\Program Files\nodejs;$env:PATH"
+    - choco install -y nodejs-lts rust
+    - $env:PATH = "C:\Program Files\nodejs;$env:USERPROFILE\.cargo\bin;$env:PATH"
     - node --version
+    - rustup --version
+    - rustup default stable
     - if (Test-Path node_modules) { Remove-Item -Recurse -Force node_modules }
     - npm ci --prefer-offline
     - npm install -g @tauri-apps/cli
-    - if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) { Invoke-WebRequest -Uri https://win.rustup.rs/x86_64 -OutFile rustup-init.exe; .\rustup-init.exe -y; Remove-Item rustup-init.exe }
-    - $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
-    - rustup default stable
     - npm run tauri build
   artifacts:
     when: on_success
