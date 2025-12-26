@@ -59,6 +59,9 @@ build-windows:
     - rustup target add x86_64-pc-windows-gnu
     - choco install -y mingw
     - $env:PATH = "$env:PATH;C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;C:\Program Files (x86)\NSIS"
+    - $env:TAURI_NSIS_PATH = "C:\Program Files (x86)\NSIS"
+    - Remove-Item -Recurse -Force "$env:LOCALAPPDATA\tauri" -ErrorAction SilentlyContinue
+    - makensis /VERSION
     - node --version
     - rustc --version
     - cargo --version
