@@ -20,6 +20,7 @@ build-linux:
         librsvg2-dev
         libglib2.0-dev
         libgirepository1.0-dev
+        libsoup-3.0-dev
         patchelf
         rpm
         pkg-config
