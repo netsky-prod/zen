@@ -490,7 +490,7 @@ pub fn generate_singbox_config(config: VlessConfig) -> Result<String, String> {
                 "tag": "tun-in",
                 "interface_name": "zen-tun",
                 "inet4_address": "172.19.0.1/30",
-                "mtu": 1500,
+                "mtu": 1400,
                 "auto_route": true,
                 "strict_route": false,
                 "stack": "gvisor",
@@ -530,10 +530,6 @@ pub fn generate_singbox_config(config: VlessConfig) -> Result<String, String> {
                 {
                     "protocol": "dns",
                     "outbound": "dns-out"
-                },
-                {
-                    "protocol": "quic",
-                    "outbound": "block"
                 },
                 {
                     "ip_cidr": [format!("{}/32", server_ip)],
