@@ -486,7 +486,7 @@ async fn get_traffic_stats() -> Result<TrafficStats, String> {
         while !current.is_null() {
             if let Ok(name) = unsafe { (*current).FriendlyName.to_string() } {
                 if name.eq_ignore_ascii_case(TARGET_INTERFACE) {
-                    found_index = Some(unsafe { (*current).IfIndex });
+                    found_index = Some(unsafe { (*current).Anonymous1.Anonymous.IfIndex });
                     break;
                 }
             }
@@ -504,8 +504,8 @@ async fn get_traffic_stats() -> Result<TrafficStats, String> {
     row.InterfaceIndex = if_index;
 
     let status = unsafe { GetIfEntry2(&mut row) };
-    if status != NO_ERROR.0 {
-        return Err(format!("GetIfEntry2 failed: {}", status));
+    if status != NO_ERROR {
+        return Err(format!("GetIfEntry2 failed: {:?}", status));
     }
 
     Ok(TrafficStats {
