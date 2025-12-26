@@ -70,26 +70,35 @@ manifest:
     - DEB_SHA=$( [ -n "$DEB_FILE" ] && sha256sum "$DEB_FILE" | awk '{print $1}' || echo "" )
     - RPM_SHA=$( [ -n "$RPM_FILE" ] && sha256sum "$RPM_FILE" | awk '{print $1}' || echo "" )
     - BASE="https://gitlab.com/${CI_PROJECT_PATH}/-/releases/v${VERSION}/downloads"
-    - cat > manifest.json <<EOF
+    - |
+      cat > manifest.json <<'EOF'
       {
-        "version": "${VERSION}",
-        "notes": "Auto-generated from CI for v${VERSION}",
+        "version": "__VERSION__",
+        "notes": "Auto-generated from CI for v__VERSION__",
         "assets": {
           "windows": {
-            "url": "${BASE}/$(basename "$WIN_FILE")",
-            "sha256": "${WIN_SHA}"
+            "url": "__BASE__/__WIN__",
+            "sha256": "__WIN_SHA__"
           },
           "deb": {
-            "url": "${BASE}/$(basename "$DEB_FILE")",
-            "sha256": "${DEB_SHA}"
+            "url": "__BASE__/__DEB__",
+            "sha256": "__DEB_SHA__"
           },
           "rpm": {
-            "url": "${BASE}/$(basename "$RPM_FILE")",
-            "sha256": "${RPM_SHA}"
+            "url": "__BASE__/__RPM__",
+            "sha256": "__RPM_SHA__"
           }
         }
       }
       EOF
+      sed -i "s|__VERSION__|${VERSION}|g" manifest.json
+      sed -i "s|__BASE__|${BASE}|g" manifest.json
+      sed -i "s|__WIN__|$(basename "$WIN_FILE")|g" manifest.json
+      sed -i "s|__DEB__|$(basename "$DEB_FILE")|g" manifest.json
+      sed -i "s|__RPM__|$(basename "$RPM_FILE")|g" manifest.json
+      sed -i "s|__WIN_SHA__|${WIN_SHA}|g" manifest.json
+      sed -i "s|__DEB_SHA__|${DEB_SHA}|g" manifest.json
+      sed -i "s|__RPM_SHA__|${RPM_SHA}|g" manifest.json
     - cat manifest.json
   artifacts:
     when: on_success
@@ -123,5 +132,18 @@ release:
     - RPM_LINK=$(upload "$RPM_FILE" | jq -r .url)
     - MAN_LINK=$(upload "$MAN_FILE" | jq -r .url)
     # Create release with links
-    - curl --header "PRIVATE-TOKEN: ${GITLAB_TOKEN}" --request POST "https://gitlab.com/api/v4/projects/${CI_PROJECT_ID}/releases" --data "name=${VERSION}" --data "tag_name=${VERSION}" --data-urlencode "description=Automated release ${VERSION}" --data-urlencode "assets[links][][name]=Windows EXE" --data-urlencode "assets[links][][url]=${CI_PROJECT_URL}${WIN_LINK}" --data-urlencode "assets[links][][name]=Linux DEB" --data-urlencode "assets[links][][url]=${CI_PROJECT_URL}${DEB_LINK}" --data-urlencode "assets[links][][name]=Linux RPM" --data-urlencode "assets[links][][url]=${CI_PROJECT_URL}${RPM_LINK}" --data-urlencode "assets[links][][name]=manifest.json" --data-urlencode "assets[links][][url]=${CI_PROJECT_URL}${MAN_LINK}"
+    - |
+      curl --header "PRIVATE-TOKEN: ${GITLAB_TOKEN}" \
+        --request POST "https://gitlab.com/api/v4/projects/${CI_PROJECT_ID}/releases" \
+        --data "name=${VERSION}" \
+        --data "tag_name=${VERSION}" \
+        --data-urlencode "description=Automated release ${VERSION}" \
+        --data-urlencode "assets[links][][name]=Windows EXE" \
+        --data-urlencode "assets[links][][url]=${CI_PROJECT_URL}${WIN_LINK}" \
+        --data-urlencode "assets[links][][name]=Linux DEB" \
+        --data-urlencode "assets[links][][url]=${CI_PROJECT_URL}${DEB_LINK}" \
+        --data-urlencode "assets[links][][name]=Linux RPM" \
+        --data-urlencode "assets[links][][url]=${CI_PROJECT_URL}${RPM_LINK}" \
+        --data-urlencode "assets[links][][name]=manifest.json" \
+        --data-urlencode "assets[links][][url]=${CI_PROJECT_URL}${MAN_LINK}"
 
