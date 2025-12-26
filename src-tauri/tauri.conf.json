@@ -45,6 +45,12 @@
       "icons/icon.ico",
       "icons/icon.icns"
     ],
+    "targets": ["nsis", "deb", "rpm"],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
     "linux": {
       "appimage": {
         "bundleMediaFramework": false
