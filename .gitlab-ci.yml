@@ -49,12 +49,8 @@ build-windows:
   stage: build
   tags: ["windows"]
   script:
-    - choco install -y nodejs-lts
-    - refreshenv
-    - npm ci
-    - npm install -g @tauri-apps/cli
-    - rustup default stable
-    - npm run tauri build
+    # Install Node.js (portable) without admin/choco
+    - powershell -Command "$ErrorActionPreference='Stop'; $nodeVersion='v20.10.0'; $nodeName=\"node-$nodeVersion-win-x64\"; $nodeDir=\"$Env:USERPROFILE\\$nodeName\"; if (!(Test-Path $nodeDir)) { $zip=\"$Env:TEMP\\node.zip\"; Invoke-WebRequest -Uri \"https://nodejs.org/dist/$nodeVersion/$nodeName.zip\" -OutFile $zip; Expand-Archive -Path $zip -DestinationPath $Env:USERPROFILE -Force; Remove-Item $zip }; $env:Path = \"$nodeDir;$nodeDir\\node_modules\\npm\\bin;$env:Path\"; node -v; npm -v; npm ci; npm install -g @tauri-apps/cli; rustup default stable; npm run tauri build"
   artifacts:
     when: on_success
     expire_in: 7 days
