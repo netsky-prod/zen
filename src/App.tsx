@@ -281,7 +281,7 @@ function App() {
     return (
       <div className="app">
         <div className="setup-banner">
-          <h2>Welcome to Zen VPN</h2>
+          <h2>Welcome to Zen Security</h2>
           <p>Download the VPN engine to start your heist on censorship</p>
           <button
             className="btn-download"
@@ -308,7 +308,7 @@ function App() {
       {/* Header */}
       <header className="header">
         <h1>
-          <span>Z</span>en <span>V</span>PN
+          <span>Z</span>en <span>S</span>ecurity
         </h1>
         <div className="header-controls">
           <button 
