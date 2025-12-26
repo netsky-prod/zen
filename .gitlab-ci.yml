@@ -30,6 +30,7 @@ build-linux:
         curl
         git
         build-essential
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
     - which xdg-open || { echo "xdg-open missing, installing xdg-utils"; apt-get install -y --no-install-recommends xdg-utils; }
     - which xdg-open || { echo "xdg-open still missing, creating stub"; ln -sf /bin/true /usr/bin/xdg-open; }
     - curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -49,8 +50,13 @@ build-windows:
   stage: build
   tags: ["windows"]
   script:
-    # Install Node.js (portable) without admin/choco
-    - powershell -Command "$ErrorActionPreference='Stop'; $nodeVersion='v20.10.0'; $nodeName=\"node-$nodeVersion-win-x64\"; $nodeDir=\"$Env:USERPROFILE\\$nodeName\"; if (!(Test-Path $nodeDir)) { $zip=\"$Env:TEMP\\node.zip\"; Invoke-WebRequest -Uri \"https://nodejs.org/dist/$nodeVersion/$nodeName.zip\" -OutFile $zip; Expand-Archive -Path $zip -DestinationPath $Env:USERPROFILE -Force; Remove-Item $zip }; $env:Path = \"$nodeDir;$nodeDir\\node_modules\\npm\\bin;$env:Path\"; node -v; npm -v; npm ci; npm install -g @tauri-apps/cli; rustup default stable; npm run tauri build"
+    - git config --global --add safe.directory "$Env:CI_PROJECT_DIR"
+    - choco install -y nodejs-lts
+    - refreshenv
+    - npm ci
+    - npm install -g @tauri-apps/cli
+    - rustup default stable
+    - npm run tauri build
   artifacts:
     when: on_success
     expire_in: 7 days
