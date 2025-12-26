@@ -28,8 +28,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Linux
-        run: npx tauri build
+      - name: Build Linux (deb + rpm)
+        run: npx tauri build --bundles deb,rpm
+
+      - name: List built files
+        run: |
+          echo "=== DEB files ==="
+          find src-tauri/target/release/bundle -name "*.deb" -type f
+          echo "=== RPM files ==="
+          find src-tauri/target/release/bundle -name "*.rpm" -type f
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -55,8 +62,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Windows
-        run: npx tauri build
+      - name: Build Windows (nsis)
+        run: npx tauri build --bundles nsis
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
