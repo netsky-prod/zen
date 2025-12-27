@@ -146,6 +146,9 @@ pub async fn install_update(_app: AppHandle) -> Result<UpdateInfo, String> {
         file.write_all(&chunk).map_err(|e| e.to_string())?;
         hasher.update(&chunk);
     }
+    
+    // Explicitly close the file before launching installer
+    drop(file);
 
     // Verify sha256 if provided
     if let Some(expected) = info.sha256.as_ref() {
@@ -167,17 +170,40 @@ pub async fn install_update(_app: AppHandle) -> Result<UpdateInfo, String> {
             .map(|s| s.eq_ignore_ascii_case("exe"))
             .unwrap_or(false)
         {
-            // Run installer directly - NSIS will request UAC elevation itself
-            let result = std::process::Command::new(&target_path).spawn();
+            let path_str = target_path.to_string_lossy().to_string();
             
-            match &result {
-                Ok(_) => {
-                    // Give a moment for the process to start, then exit
+            // Use ShellExecuteW for proper UAC elevation
+            use std::os::windows::ffi::OsStrExt;
+            use std::ffi::OsStr;
+            
+            let path_wide: Vec<u16> = OsStr::new(&path_str)
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect();
+            let verb_wide: Vec<u16> = OsStr::new("runas")
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect();
+            
+            unsafe {
+                let result = windows::Win32::UI::Shell::ShellExecuteW(
+                    None,
+                    windows::core::PCWSTR(verb_wide.as_ptr()),
+                    windows::core::PCWSTR(path_wide.as_ptr()),
+                    None,
+                    None,
+                    windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL,
+                );
+                
+                // ShellExecuteW returns > 32 on success
+                if result.0 as usize > 32 {
                     std::thread::sleep(std::time::Duration::from_millis(500));
                     std::process::exit(0);
-                }
-                Err(e) => {
-                    eprintln!("Failed to launch installer: {}", e);
+                } else {
+                    return Err(format!(
+                        "ShellExecuteW failed. Code: {:?}, Path: {}",
+                        result.0, path_str
+                    ));
                 }
             }
         }
