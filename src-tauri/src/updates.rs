@@ -167,16 +167,25 @@ pub async fn install_update(_app: AppHandle) -> Result<UpdateInfo, String> {
             .map(|s| s.eq_ignore_ascii_case("exe"))
             .unwrap_or(false)
         {
-            // Use ShellExecute with "runas" to trigger UAC properly
+            // Use PowerShell Start-Process for reliable UAC elevation
             let path_str = target_path.to_string_lossy().to_string();
-            let result = std::process::Command::new("cmd")
-                .args(["/C", "start", "", &path_str])
+            let result = std::process::Command::new("powershell")
+                .args([
+                    "-NoProfile",
+                    "-Command",
+                    &format!("Start-Process -FilePath '{}' -Wait", path_str),
+                ])
                 .spawn();
             
-            if result.is_ok() {
-                // Give installer a moment to start, then exit app
-                std::thread::sleep(std::time::Duration::from_millis(1000));
-                std::process::exit(0);
+            match &result {
+                Ok(_) => {
+                    // Exit immediately - PowerShell will handle the installer
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    std::process::exit(0);
+                }
+                Err(e) => {
+                    eprintln!("Failed to launch installer: {}", e);
+                }
             }
         }
     }
