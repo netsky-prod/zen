@@ -167,16 +167,20 @@ pub async fn install_update(_app: AppHandle) -> Result<UpdateInfo, String> {
             .map(|s| s.eq_ignore_ascii_case("exe"))
             .unwrap_or(false)
         {
-            // Use cmd /c start to launch installer detached, then exit app
+            // Use PowerShell Start-Process with -Verb RunAs for UAC elevation (no -Wait)
             let path_str = target_path.to_string_lossy().to_string();
-            let result = std::process::Command::new("cmd")
-                .args(["/c", "start", "", &path_str])
+            let result = std::process::Command::new("powershell")
+                .args([
+                    "-NoProfile",
+                    "-Command",
+                    &format!("Start-Process -FilePath '{}' -Verb RunAs", path_str),
+                ])
                 .spawn();
             
             match &result {
                 Ok(_) => {
                     // Give a moment for the process to start, then exit
-                    std::thread::sleep(std::time::Duration::from_millis(200));
+                    std::thread::sleep(std::time::Duration::from_millis(500));
                     std::process::exit(0);
                 }
                 Err(e) => {
