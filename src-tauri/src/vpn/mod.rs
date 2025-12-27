@@ -18,7 +18,9 @@ pub use process::{
 };
 
 // Re-export kill switch items (used by main.rs)
-pub use killswitch::{cleanup_killswitch, create_killswitch, state_file_exists, KillSwitchConfig};
+pub use killswitch::{
+    cleanup_killswitch, create_killswitch, recover_killswitch, state_file_exists, KillSwitchConfig,
+};
 
 // Re-export VPN manager items (used by main.rs)
 pub use manager::create_vpn_manager;

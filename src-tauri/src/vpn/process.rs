@@ -469,6 +469,13 @@ pub fn generate_singbox_config(config: VlessConfig) -> Result<String, String> {
 
     let server_ip = resolve_server_ip(&config.address);
 
+    // Configure inbounds/inbound[0] based on platform
+    let (inet4_address, strict_route, stack) = if cfg!(target_os = "windows") {
+        ("172.19.0.1/30", false, "system")
+    } else {
+        ("100.64.0.1/30", true, "gvisor")
+    };
+
     let singbox_config = serde_json::json!({
         "log": {
             "level": "debug",
@@ -477,11 +484,23 @@ pub fn generate_singbox_config(config: VlessConfig) -> Result<String, String> {
         "dns": {
             "servers": [
                 {
-                    "tag": "direct-dns",
-                    "address": "8.8.8.8",
+                    "tag": "remote",
+                    "address": "tls://1.1.1.1",
+                    "detour": "proxy"
+                },
+                {
+                    "tag": "local",
+                    "address": "223.5.5.5",
                     "detour": "direct"
                 }
             ],
+            "rules": [
+                {
+                    "domain": [config.address.clone()],
+                    "server": "local"
+                }
+            ],
+            "final": "remote",
             "strategy": "ipv4_only"
         },
         "inbounds": [
@@ -489,11 +508,11 @@ pub fn generate_singbox_config(config: VlessConfig) -> Result<String, String> {
                 "type": "tun",
                 "tag": "tun-in",
                 "interface_name": "zen-tun",
-                "inet4_address": "172.19.0.1/30",
+                "inet4_address": inet4_address,
                 "mtu": 1400,
                 "auto_route": true,
-                "strict_route": false,
-                "stack": "system",
+                "strict_route": strict_route,
+                "stack": stack,
                 "sniff": true,
                 "sniff_override_destination": false
             }

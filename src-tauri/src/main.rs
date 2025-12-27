@@ -17,9 +17,9 @@ use tauri::{
 
 use logging::{LogEntry, LogFilterState, LogLevel};
 use vpn::{
-    create_killswitch, create_vpn_manager, generate_singbox_config, get_connection_status,
-    kill_singbox_sync, start_singbox, stop_singbox, AppState, AppStatus, KillSwitchConfig,
-    Profile, TrafficStats, VlessConfig,
+    cleanup_killswitch, create_killswitch, create_vpn_manager, generate_singbox_config,
+    get_connection_status, kill_singbox_sync, recover_killswitch, start_singbox, stop_singbox,
+    AppState, AppStatus, KillSwitchConfig, Profile, TrafficStats, VlessConfig,
 };
 use updates::{check_for_update, install_update};
 
@@ -749,6 +749,11 @@ fn main() {
         .manage(LogFilterState::default())
         .manage(create_vpn_manager())
         .setup(|app| {
+            // Attempt to recover from previous crash by cleaning up stale killswitch rules
+            if let Err(e) = recover_killswitch() {
+                eprintln!("Failed to recover kill switch: {}", e);
+            }
+
             let icon_data = include_bytes!("../icons/icon.png");
             let icon = Image::from_bytes(icon_data)?;
 
