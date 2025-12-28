@@ -18,8 +18,8 @@ use tauri::{
 use logging::{LogEntry, LogFilterState, LogLevel};
 use vpn::{
     cleanup_killswitch, create_killswitch, create_vpn_manager, generate_singbox_config,
-    get_connection_status, kill_singbox_sync, recover_killswitch, start_singbox, stop_singbox,
-    AppState, AppStatus, KillSwitchConfig, Profile, TrafficStats, VlessConfig,
+    get_available_rule_sets, get_connection_status, kill_singbox_sync, recover_killswitch, start_singbox,
+    stop_singbox, AppState, AppStatus, KillSwitchConfig, Profile, TrafficStats, VlessConfig,
 };
 use updates::{check_for_update, install_update};
 
@@ -302,6 +302,8 @@ fn parse_vless_link(link: String) -> Result<VlessConfig, String> {
             .cloned()
             .unwrap_or_else(|| address.to_string()),
         name,
+        routing_mode: None,
+        target_country: None,
     })
 }
 
@@ -827,6 +829,7 @@ fn main() {
             get_killswitch_status,
             check_for_update,
             install_update,
+            get_available_rule_sets,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

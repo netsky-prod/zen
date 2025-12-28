@@ -491,6 +491,34 @@ body {
   word-break: break-word;
 }
 
+/* Settings Select */
+.settings-select {
+  width: 100%;
+  max-width: 140px;
+  padding: 4px 8px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: 'Special Elite', monospace;
+  font-size: 0.8rem;
+  color: #333;
+  outline: none;
+}
+
+.settings-select:focus {
+  border-color: var(--red-primary);
+}
+
+.settings-select:disabled {
+  opacity: 0.6;
+  background: #eee;
+  cursor: not-allowed;
+}
+
+.routing-section {
+    flex-direction: column;
+}
+
 /* Toggle Switch */
 .toggle-switch {
   position: relative;
@@ -857,19 +885,27 @@ body {
 
 .log-level-select {
   padding: 8px 12px;
-  background: #2a2a2a;
+  background: #2a2a2a !important;
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 6px;
-  color: var(--text-light);
+  color: #f5f5dc !important;
   font-family: 'Bebas Neue', sans-serif;
   font-size: 0.85rem;
   letter-spacing: 1px;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 .log-level-select:focus {
   outline: none;
   border-color: var(--red-primary);
+}
+
+.log-level-select option {
+  background: #2a2a2a;
+  color: #f5f5dc;
 }
 
 .log-viewer-controls .btn-icon {

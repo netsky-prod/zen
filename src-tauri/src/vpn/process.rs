@@ -10,11 +10,12 @@ use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
+use tauri::path::BaseDirectory;
 use tokio::process::{Child, Command};
 
 use super::manager::{HealthCheckConfig, HealthCheckResult, HealthMonitor, HealthMonitorHandle, VpnManager, ConnectionState};
-use super::VlessConfig;
+use super::{VlessConfig, RuleSetInfo};
 use crate::logging::{CircularLogBuffer, LogEntry, LogLevel, parse_singbox_line};
 use crate::notifications::{emit_vpn_event, VpnEvent};
 
@@ -452,6 +453,76 @@ async fn reconnect_singbox(
     }
 }
 
+/// Get available country rule sets
+#[tauri::command]
+pub fn get_available_rule_sets(app_handle: AppHandle) -> Result<Vec<RuleSetInfo>, String> {
+    let mut rules = Vec::new();
+    
+    // Scan resources directory for geoip-*.srs files
+    // In dev: src-tauri/resources
+    // In prod: resources folder relative to executable
+    
+    let resource_dir = match app_handle.path().resolve("resources", BaseDirectory::Resource) {
+        Ok(p) => p,
+        Err(_) => PathBuf::from("src-tauri/resources"),
+    };
+
+    if let Ok(entries) = fs::read_dir(resource_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
+                if filename.starts_with("geoip-") && filename.ends_with(".srs") {
+                    let id = filename
+                        .trim_start_matches("geoip-")
+                        .trim_end_matches(".srs")
+                        .to_string();
+                    
+                    // Simple name formatting: "ru" -> "RU"
+                    let name = id.to_uppercase();
+                    
+                    rules.push(RuleSetInfo { id, name });
+                }
+            }
+        }
+    }
+    
+    // Sort by name
+    rules.sort_by(|a, b| a.name.cmp(&b.name));
+    
+    Ok(rules)
+}
+
+/// Copy a resource file to the config directory
+fn copy_resource_file(app_handle: &AppHandle, filename: &str) -> Result<(), String> {
+    let target_path = get_config_dir().join(filename);
+    
+    // Resolve resource path
+    let resource_path = match app_handle.path().resolve(format!("resources/{}", filename), BaseDirectory::Resource) {
+        Ok(path) => path,
+        Err(_) => {
+            // Fallback for dev mode
+            PathBuf::from("src-tauri/resources").join(filename)
+        }
+    };
+
+    let source_path = if resource_path.exists() {
+        resource_path
+    } else {
+        // Double check dev path if resolve failed but didn't error (shouldn't happen but safe)
+        let dev_path = PathBuf::from("src-tauri/resources").join(filename);
+        if dev_path.exists() {
+            dev_path
+        } else {
+            return Err(format!("Resource not found: {}", filename));
+        }
+    };
+
+    fs::copy(&source_path, &target_path)
+        .map_err(|e| format!("Failed to copy resource file: {}", e))?;
+        
+    Ok(())
+}
+
 /// Generate sing-box configuration JSON from VlessConfig
 #[tauri::command]
 pub fn generate_singbox_config(config: VlessConfig) -> Result<String, String> {
@@ -475,6 +546,86 @@ pub fn generate_singbox_config(config: VlessConfig) -> Result<String, String> {
     } else {
         ("100.64.0.1/30", true, "gvisor")
     };
+
+    // Prepare routing mode / country
+    let routing_mode = config.routing_mode.as_deref().unwrap_or("global");
+    let target_country = config.target_country.as_deref().unwrap_or("ru");
+
+    // Resolve available rule-set files in config dir (copied beforehand)
+    let geoip_file = format!("geoip-{}.srs", target_country);
+    let geosite_primary = format!("geosite-{}.srs", target_country);
+    let geosite_fallback = format!("geosite-category-{}.srs", target_country);
+
+    let geoip_path = get_config_dir().join(&geoip_file);
+    let geosite_path_primary = get_config_dir().join(&geosite_primary);
+    let geosite_path_fallback = get_config_dir().join(&geosite_fallback);
+
+    let geosite_path = if geosite_path_primary.exists() {
+        Some((geosite_primary.clone(), geosite_path_primary))
+    } else if geosite_path_fallback.exists() {
+        Some((geosite_fallback.clone(), geosite_path_fallback))
+    } else {
+        None
+    };
+
+    let mut route_section = serde_json::json!({
+        "rules": [
+            {
+                "protocol": "dns",
+                "outbound": "dns-out"
+            },
+            {
+                "ip_cidr": [format!("{}/32", server_ip)],
+                "outbound": "direct"
+            },
+            {
+                "ip_is_private": true,
+                "outbound": "direct"
+            }
+        ],
+        "auto_detect_interface": true,
+        "final": "proxy"
+    });
+
+    if routing_mode == "smart" {
+        let mut rule_set_entries = vec![];
+        let mut country_rule_tags = vec![];
+
+        if geoip_path.exists() {
+            let tag = geoip_file.trim_end_matches(".srs").to_string();
+            rule_set_entries.push(serde_json::json!({
+                "tag": tag,
+                "type": "local",
+                "format": "binary",
+                "path": geoip_path.to_string_lossy()
+            }));
+            country_rule_tags.push(tag);
+        }
+
+        if let Some((geosite_name, geosite_path)) = geosite_path {
+            let tag = geosite_name.trim_end_matches(".srs").to_string();
+            rule_set_entries.push(serde_json::json!({
+                "tag": tag,
+                "type": "local",
+                "format": "binary",
+                "path": geosite_path.to_string_lossy()
+            }));
+            country_rule_tags.push(tag);
+        }
+
+        if !rule_set_entries.is_empty() {
+            route_section["rule_set"] = serde_json::json!(rule_set_entries);
+        }
+
+        if !country_rule_tags.is_empty() {
+            if let Some(rules) = route_section["rules"].as_array_mut() {
+                rules.push(serde_json::json!({
+                    "rule_set": country_rule_tags,
+                    "outbound": "direct"
+                }));
+            }
+        }
+    }
 
     let singbox_config = serde_json::json!({
         "log": {
@@ -544,24 +695,7 @@ pub fn generate_singbox_config(config: VlessConfig) -> Result<String, String> {
                 "tag": "dns-out"
             }
         ],
-        "route": {
-            "rules": [
-                {
-                    "protocol": "dns",
-                    "outbound": "dns-out"
-                },
-                {
-                    "ip_cidr": [format!("{}/32", server_ip)],
-                    "outbound": "direct"
-                },
-                {
-                    "ip_is_private": true,
-                    "outbound": "direct"
-                }
-            ],
-            "auto_detect_interface": true,
-            "final": "proxy"
-        }
+        "route": route_section
     });
 
     serde_json::to_string_pretty(&singbox_config).map_err(|e| e.to_string())
@@ -631,6 +765,39 @@ pub async fn start_singbox(
     state.store_config(config.clone());
     vpn_manager.clear_shutdown_request();
     vpn_manager.set_state(ConnectionState::Connecting);
+
+    // Copy rule sets if smart routing is enabled
+    if config.routing_mode.as_deref() == Some("smart") {
+        let country = config.target_country.as_deref().unwrap_or("ru");
+        let geoip = format!("geoip-{}.srs", country);
+        let geosite = format!("geosite-{}.srs", country);
+        
+        if let Err(e) = copy_resource_file(&app_handle, &geoip) {
+            state.log(LogLevel::Warn, format!("Failed to copy {}: {}", geoip, e));
+        }
+        if let Err(e) = copy_resource_file(&app_handle, &geosite) {
+            state.log(LogLevel::Warn, format!("Failed to copy {}: {}", geosite, e));
+        }
+    }
+
+    // Copy rule sets (best effort) when smart routing is enabled
+    if config.routing_mode.as_deref() == Some("smart") {
+        let country = config.target_country.as_deref().unwrap_or("ru");
+        let geoip = format!("geoip-{}.srs", country);
+        let geosite_primary = format!("geosite-{}.srs", country);
+        let geosite_fallback = format!("geosite-category-{}.srs", country);
+
+        if let Err(e) = copy_resource_file(&app_handle, &geoip) {
+            state.log(LogLevel::Warn, format!("Failed to copy {}: {}", geoip, e));
+        }
+        if let Err(e) = copy_resource_file(&app_handle, &geosite_primary) {
+            state.log(LogLevel::Warn, format!("Failed to copy {}: {}", geosite_primary, e));
+            // Try fallback category file
+            if let Err(e2) = copy_resource_file(&app_handle, &geosite_fallback) {
+                state.log(LogLevel::Warn, format!("Failed to copy {}: {}", geosite_fallback, e2));
+            }
+        }
+    }
 
     // Clear previous log file
     clear_log_file()?;
@@ -747,6 +914,25 @@ pub async fn start_singbox(
     state.store_config(config.clone());
     vpn_manager.clear_shutdown_request();
     vpn_manager.set_state(ConnectionState::Connecting);
+
+    // Copy rule sets (best effort) when smart routing is enabled
+    if config.routing_mode.as_deref() == Some("smart") {
+        let country = config.target_country.as_deref().unwrap_or("ru");
+        let geoip = format!("geoip-{}.srs", country);
+        let geosite_primary = format!("geosite-{}.srs", country);
+        let geosite_fallback = format!("geosite-category-{}.srs", country);
+
+        if let Err(e) = copy_resource_file(&app_handle, &geoip) {
+            state.log(LogLevel::Warn, format!("Failed to copy {}: {}", geoip, e));
+        }
+        if let Err(e) = copy_resource_file(&app_handle, &geosite_primary) {
+            state.log(LogLevel::Warn, format!("Failed to copy {}: {}", geosite_primary, e));
+            // Try fallback category file
+            if let Err(e2) = copy_resource_file(&app_handle, &geosite_fallback) {
+                state.log(LogLevel::Warn, format!("Failed to copy {}: {}", geosite_fallback, e2));
+            }
+        }
+    }
 
     // Clear previous log file
     clear_log_file()?;

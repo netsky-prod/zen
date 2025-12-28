@@ -9,6 +9,16 @@ interface KillSwitchStatus {
   message: string
 }
 
+interface RuleSetInfo {
+  id: string
+  name: string
+}
+
+interface RoutingConfig {
+  routing_mode?: string
+  target_country?: string
+}
+
 interface SettingsProps {
   /** Whether the settings panel is open */
   isOpen: boolean
@@ -18,6 +28,12 @@ interface SettingsProps {
   serverIp?: string
   /** Whether VPN is currently connected */
   isConnected: boolean
+  /** Available rule sets (countries) */
+  ruleSets: RuleSetInfo[]
+  /** Current profile routing config */
+  currentConfig?: RoutingConfig
+  /** Handler to update config */
+  onUpdateConfig: (key: 'routing_mode' | 'target_country', value: string) => Promise<void> | void
 }
 
 export function Settings({
@@ -25,6 +41,9 @@ export function Settings({
   onClose,
   serverIp,
   isConnected,
+  ruleSets,
+  currentConfig,
+  onUpdateConfig,
 }: SettingsProps) {
   const [killSwitchEnabled, setKillSwitchEnabled] = useState(false)
   const [killSwitchAvailable, setKillSwitchAvailable] = useState(false)
@@ -180,6 +199,51 @@ export function Settings({
                 <div className="modal-notice">
                   ⚠️ Kill switch active. Traffic blocked when VPN disconnects.
                   {!isConnected && ' Connect to restore access.'}
+                </div>
+              )}
+
+              <h3 className="modal-section-title">Routing</h3>
+
+              <div className="modal-item">
+                <div className="modal-item-info">
+                  <div className="modal-item-label">Mode</div>
+                  <div className="modal-item-desc">
+                    Choose how traffic is routed. Smart bypasses local (country) traffic.
+                  </div>
+                </div>
+                <div className="modal-item-control">
+                  <select
+                    className="settings-select"
+                    value={currentConfig?.routing_mode || 'global'}
+                    onChange={(e) => onUpdateConfig('routing_mode', e.target.value)}
+                    disabled={isConnected}
+                  >
+                    <option value="global">Global (All via VPN)</option>
+                    <option value="smart">Smart (Bypass local)</option>
+                  </select>
+                </div>
+              </div>
+
+              {currentConfig?.routing_mode === 'smart' && (
+                <div className="modal-item">
+                  <div className="modal-item-info">
+                    <div className="modal-item-label">Country Rules</div>
+                    <div className="modal-item-desc">
+                      Traffic to this country goes direct; others via VPN.
+                    </div>
+                  </div>
+                  <div className="modal-item-control">
+                    <select
+                      className="settings-select"
+                      value={currentConfig?.target_country || 'ru'}
+                      onChange={(e) => onUpdateConfig('target_country', e.target.value)}
+                      disabled={isConnected}
+                    >
+                      {((ruleSets && ruleSets.length > 0) ? ruleSets : [{ id: 'ru', name: 'RU' }]).map((r) => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 

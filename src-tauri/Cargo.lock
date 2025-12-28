@@ -5951,7 +5951,7 @@ dependencies = [
 
 [[package]]
 name = "zen-security"
-version = "1.0.0"
+version = "1.0.2"
 dependencies = [
  "backon",
  "dirs 5.0.1",

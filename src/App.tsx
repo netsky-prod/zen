@@ -22,6 +22,13 @@ interface VlessConfig {
   path: string
   host: string
   name: string
+  routing_mode?: string
+  target_country?: string
+}
+
+interface RuleSetInfo {
+  id: string
+  name: string
 }
 
 interface Profile {
@@ -70,12 +77,14 @@ function App() {
   const [checkingUpdate, setCheckingUpdate] = useState(false)
   const [installingUpdate, setInstallingUpdate] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [ruleSets, setRuleSets] = useState<RuleSetInfo[]>([])
 
   const invoke = window.__TAURI__?.core?.invoke
 
   useEffect(() => {
     checkSetup()
     loadProfiles()
+    loadRuleSets()
     // Auto-check for updates on startup
     handleCheckUpdate()
 
@@ -126,6 +135,31 @@ function App() {
       }
     } catch (e) {
       toast.error('Failed to load profiles', { description: String(e) })
+    }
+  }
+
+  const loadRuleSets = async () => {
+    if (!invoke) return
+    try {
+      const sets = await invoke<RuleSetInfo[]>('get_available_rule_sets')
+      setRuleSets(sets)
+    } catch (e) {
+      console.error('Failed to load rule sets:', e)
+    }
+  }
+
+  const handleUpdateConfig = async (key: keyof VlessConfig, value: any) => {
+    if (!invoke || !currentProfile) return
+    const updatedConfig = { ...currentProfile.config, [key]: value }
+    const updatedProfile = { ...currentProfile, config: updatedConfig }
+    
+    // Update local state immediately
+    setProfiles(prev => prev.map(p => p.id === currentProfile.id ? updatedProfile : p))
+    
+    try {
+      await invoke('save_profile', { profile: updatedProfile })
+    } catch (e) {
+      toast.error('Failed to save settings')
     }
   }
 
@@ -468,6 +502,9 @@ function App() {
         onClose={() => setSettingsOpen(false)}
         serverIp={currentProfile?.config.address}
         isConnected={isConnected}
+        ruleSets={ruleSets}
+        currentConfig={currentProfile?.config}
+        onUpdateConfig={handleUpdateConfig}
       />
     </div>
   )

@@ -9,11 +9,11 @@ pub mod process;
 pub mod types;
 
 // Re-export commonly used types for convenience
-pub use types::{AppStatus, Profile, TrafficStats, VlessConfig};
+pub use types::{AppStatus, Profile, TrafficStats, VlessConfig, RuleSetInfo};
 
 // Re-export process management items (used by main.rs)
 pub use process::{
-    generate_singbox_config, get_connection_status, kill_singbox_sync,
+    generate_singbox_config, get_available_rule_sets, get_connection_status, kill_singbox_sync,
     start_singbox, stop_singbox, AppState,
 };
 

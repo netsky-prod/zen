@@ -16,6 +16,8 @@ pub struct VlessConfig {
     pub path: String,
     pub host: String,
     pub name: String,
+    pub routing_mode: Option<String>,
+    pub target_country: Option<String>,
 }
 
 /// A saved VPN profile containing connection configuration
@@ -39,4 +41,11 @@ pub struct AppStatus {
 pub struct TrafficStats {
     pub rx_bytes: u64,
     pub tx_bytes: u64,
+}
+
+/// Available routing rule set (country)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RuleSetInfo {
+    pub id: String,
+    pub name: String,
 }
