@@ -1,12 +1,16 @@
 [package]
 name = "zen-security"
-version = "1.0.2"
+version = "1.0.3"
 description = "Zen Security - Privacy protection client"
 authors = ["you"]
 edition = "2021"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
+
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
