@@ -1195,6 +1195,13 @@ mod tests {
             path: "/path".to_string(),
             host: "test.example.com".to_string(),
             name: "Test Server".to_string(),
+            routing_mode: None,
+            target_country: None,
+            protocol: None,
+            up_mbps: None,
+            down_mbps: None,
+            obfs: None,
+            obfs_password: None,
         };
 
         manager.store_config(config.clone());
@@ -1332,6 +1339,13 @@ mod tests {
             path: "/".to_string(),
             host: "test.com".to_string(),
             name: "Test".to_string(),
+            routing_mode: None,
+            target_country: None,
+            protocol: None,
+            up_mbps: None,
+            down_mbps: None,
+            obfs: None,
+            obfs_password: None,
         });
 
         // Prepare disconnect

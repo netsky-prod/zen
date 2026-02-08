@@ -24,6 +24,11 @@ interface VlessConfig {
   name: string
   routing_mode?: string
   target_country?: string
+  protocol?: string
+  up_mbps?: number
+  down_mbps?: number
+  obfs?: string
+  obfs_password?: string
 }
 
 interface RuleSetInfo {
@@ -200,8 +205,8 @@ function App() {
         // Assume JSON
         config = await invoke<VlessConfig>('import_config_json', { jsonContent: content })
       } else {
-        // Assume Link
-        config = await invoke<VlessConfig>('parse_vless_link', { link: content })
+        // Assume Link (vless://, hysteria2://, hy2://)
+        config = await invoke<VlessConfig>('parse_share_link', { link: content })
       }
 
       if (!config.address || !config.uuid || !config.port || config.port < 1 || config.port > 65535) {
@@ -231,7 +236,7 @@ function App() {
     setError(null)
 
     try {
-      const config = await invoke<VlessConfig>('parse_vless_link', { link: linkInput })
+      const config = await invoke<VlessConfig>('parse_share_link', { link: linkInput })
       if (!config.address || !config.uuid || !config.port || config.port < 1 || config.port > 65535) {
         setError('Invalid profile data (address/port/uuid)')
         return
@@ -435,7 +440,12 @@ function App() {
                   className={`server-card ${selectedId === profile.id ? 'selected' : ''}`}
                   onClick={() => setSelectedId(profile.id)}
                 >
-                  <div className="server-name">{profile.name}</div>
+                  <div className="server-name">
+                    {profile.name}
+                    <span className={`protocol-badge ${profile.config.protocol === 'hysteria2' ? 'hy2' : 'vless'}`}>
+                      {profile.config.protocol === 'hysteria2' ? 'HY2' : 'VLESS'}
+                    </span>
+                  </div>
                   <div className="server-address">
                     {profile.config.address}:{profile.config.port}
                   </div>
@@ -453,7 +463,7 @@ function App() {
           <div className="add-server">
             <input
               type="text"
-              placeholder="vless:// link"
+              placeholder="vless:// or hysteria2:// link"
               value={linkInput}
               onChange={(e) => setLinkInput(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -581,7 +591,7 @@ function App() {
               <textarea
                 value={importContent}
                 onChange={(e) => setImportContent(e.target.value)}
-                placeholder='vless://... or {"outbounds": [...] }'
+                placeholder='vless:// | hysteria2:// | {"outbounds": [...]}'
                 className="import-textarea"
                 rows={10}
               />
