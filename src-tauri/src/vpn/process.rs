@@ -578,7 +578,7 @@ fn copy_resource_file(app_handle: &AppHandle, filename: &str) -> Result<(), Stri
 /// Generate sing-box configuration JSON from VlessConfig
 #[tauri::command]
 pub fn generate_singbox_config(config: VlessConfig) -> Result<String, String> {
-    let mut transport = if config.transport_type == "ws" {
+    let transport = if config.transport_type == "ws" {
         serde_json::json!({
             "type": "ws",
             "path": config.path,
@@ -613,14 +613,10 @@ pub fn generate_singbox_config(config: VlessConfig) -> Result<String, String> {
         }
     }
 
-    // For WS transport, use the domain (host) directly as server address
-    // This makes the connection look like normal HTTPS traffic to DPI
-    // For REALITY/TCP, resolve to IP as before
-    let server_ip = if config.transport_type == "ws" && !config.host.is_empty() {
-        config.host.clone()
-    } else {
-        resolve_server_ip(&config.address)
-    };
+    // Always resolve server hostname to IP before starting sing-box.
+    // This prevents DNS loop: sing-box routes all traffic through TUN,
+    // so DNS queries for the VPN server hostname would also go through TUN.
+    let server_ip = resolve_server_ip(&config.address);
 
     // Configure inbounds/inbound[0] based on platform
     let (inet4_address, strict_route, stack) = if cfg!(target_os = "windows") {
@@ -792,12 +788,7 @@ pub fn generate_singbox_config(config: VlessConfig) -> Result<String, String> {
                     "detour": "direct"
                 }
             ],
-            "rules": [
-                {
-                    "domain": [config.address.clone()],
-                    "server": "local"
-                }
-            ],
+            "rules": [],
             "final": "remote",
             "strategy": "ipv4_only"
         },
