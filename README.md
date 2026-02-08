@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/netsky-prod/zen/releases/latest">
-    <img src="https://img.shields.io/github/v/release/netsky-prod/zen?style=flat-square" alt="Release">
+  <a href="https://github.com/zen-privacy/zen/releases/latest">
+    <img src="https://img.shields.io/github/v/release/zen-privacy/zen?style=flat-square" alt="Release">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-CC%20BY--NC%204.0-blue?style=flat-square" alt="License">
@@ -33,11 +33,11 @@
 
 ### Windows
 
-Download `ZenPrivacy_x.x.x_x64-setup.exe` from [Releases](https://github.com/netsky-prod/zen/releases/latest) and run the installer.
+Download `ZenPrivacy_x.x.x_x64-setup.exe` from [Releases](https://github.com/zen-privacy/zen/releases/latest) and run the installer.
 
 ### Linux
 
-Download from [Releases](https://github.com/netsky-prod/zen/releases/latest):
+Download from [Releases](https://github.com/zen-privacy/zen/releases/latest):
 
 ```bash
 # Debian / Ubuntu

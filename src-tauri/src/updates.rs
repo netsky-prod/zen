@@ -7,7 +7,7 @@ use std::{env, fs};
 use tauri::AppHandle;
 
 const MANIFEST_URL: &str =
-    "https://github.com/netsky-prod/zen/releases/latest/download/manifest.json";
+    "https://github.com/zen-privacy/zen/releases/latest/download/manifest.json";
 
 #[derive(Deserialize, Debug, Clone)]
 struct AssetEntry {

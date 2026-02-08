@@ -5894,7 +5894,7 @@ dependencies = [
 
 [[package]]
 name = "zen-privacy"
-version = "1.0.6"
+version = "1.0.7"
 dependencies = [
  "backon",
  "dirs 5.0.1",

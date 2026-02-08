@@ -1,13 +1,13 @@
 [package]
 name = "zen-privacy"
-version = "1.0.6"
+version = "1.0.7"
 description = "Zen Privacy - Privacy protection client"
 authors = ["you"]
 edition = "2021"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
-winres = "0.1"
+embed-resource = "3"
 
 
 [dependencies]
