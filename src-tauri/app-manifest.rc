@@ -1,3 +1,0 @@
-// Embed Windows manifest for admin elevation (requireAdministrator)
-// Resource type 24 = RT_MANIFEST
-1 24 "app.manifest"
