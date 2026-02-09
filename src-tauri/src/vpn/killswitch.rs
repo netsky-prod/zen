@@ -933,9 +933,17 @@ impl WindowsKillSwitch {
         }
 
         // 7. Allow VPN tunnel interface traffic
-        // Note: Windows firewall doesn't support filtering by TUN interface name directly,
-        // so we rely on the sing-box process rule and VPN server IP rule to control traffic.
-        // The block rules will prevent non-VPN traffic while allowing established VPN connections.
+        // Windows firewall doesn't support filtering by TUN interface name directly,
+        // so we allow traffic to/from the TUN subnet. Applications send traffic to the
+        // TUN address (172.19.0.0/30), sing-box picks it up and forwards through VPN.
+        self.add_rule(
+            "ZenVPN-Allow-TUN-Out",
+            &["dir=out", "action=allow", "remoteip=172.19.0.0/30", "enable=yes"],
+        )?;
+        self.add_rule(
+            "ZenVPN-Allow-TUN-In",
+            &["dir=in", "action=allow", "remoteip=172.19.0.0/30", "enable=yes"],
+        )?;
 
         // 8. Block all other outbound traffic
         self.add_rule(
@@ -982,6 +990,8 @@ impl WindowsKillSwitch {
         // Delete rules in reverse order (block rules first, then allow rules)
         self.delete_rule(Self::RULE_BLOCK_IN)?;
         self.delete_rule(Self::RULE_BLOCK_OUT)?;
+        self.delete_rule("ZenVPN-Allow-TUN-In")?;
+        self.delete_rule("ZenVPN-Allow-TUN-Out")?;
         self.delete_rule(Self::RULE_ALLOW_SINGBOX)?;
         self.delete_rule(Self::RULE_ALLOW_SERVER)?;
         self.delete_rule(Self::RULE_ALLOW_DNS_2)?;
